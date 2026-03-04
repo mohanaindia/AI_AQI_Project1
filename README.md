@@ -95,8 +95,8 @@ virtual environment is recommended
 
 ## OUTPUT:
 
--> (in outputs/predictions.csv)
--> output analysis in outputs/AQI_analysis.html
+- (in outputs/predictions.csv)
+- output analysis in outputs/AQI_analysis.html
 
 New columns added:
 
