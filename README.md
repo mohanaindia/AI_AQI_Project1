@@ -95,7 +95,8 @@ virtual environment is recommended
 
 ## OUTPUT:
 
-(in outputs/predictions.csv)
+- (in outputs/predictions.csv)
+- output analysis in outputs/AQI_analysis.html
 
 New columns added:
 
@@ -106,3 +107,10 @@ New columns added:
 ## TECHNOLOGIES
 1. Python3
 2. Libraries - (Pandas, Numpy)
+
+## Group Members 
+
+-  Mohana V (se24ucse101)
+-  Pushpashree R (se24ucse048)
+-  Vaishnavi V (se24ucse106)
+-  Karthik K (se24ucse096)
