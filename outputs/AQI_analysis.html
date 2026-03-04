@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AirSense Analytics — India Air Quality</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0b1120; --surface: #131f35; --card: #1e293b;
+    --border: #1e3a5f; --border2: #334155;
+    --text: #e2e8f0; --muted: #94a3b8; --dim: #475569; --faint: #334155;
+    --accent: #38bdf8; --accent2: #bae6fd; --accent3: #93c5fd;
+    --good: #22c55e; --sat: #84cc16; --mod: #eab308;
+    --poor: #f97316; --vpoor: #ef4444; --severe: #7f1d1d;
+    --font-mono: 'IBM Plex Mono', monospace;
+    --font-display: 'Space Grotesk', sans-serif;
+  }
+  body { background: var(--bg); color: var(--text); font-family: var(--font-mono); min-height: 100vh; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--card); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  /* Header */
+  .header { background: #101828; border-bottom: 1px solid var(--border); padding: 18px 32px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+  .logo { font-family: var(--font-display); font-size: 22px; font-weight: 700; color: #e0f2fe; letter-spacing: -0.5px; }
+  .logo span { font-size: 11px; color: var(--dim); display: block; font-weight: 400; margin-top: 2px; font-family: var(--font-mono); }
+  .tabs { display: flex; gap: 6px; }
+  .tab { background: none; border: none; cursor: pointer; padding: 8px 18px; border-radius: 6px; font-family: var(--font-mono); font-size: 13px; color: var(--muted); transition: all 0.18s; }
+  .tab:hover { background: var(--card); }
+  .tab.active { background: #1e40af; color: var(--accent3); }
+
+  /* Layout */
+  .main { padding: 28px 32px; max-width: 1200px; margin: 0 auto; }
+  .panel { display: none; animation: fadeIn 0.3s ease; }
+  .panel.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  /* Grid */
+  .grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 24px; }
+  .grid-2 { display: grid; grid-template-columns: 1.4fr 1fr; gap: 20px; margin-bottom: 20px; }
+  .grid-2b { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; }
+  .grid-4r { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }
+
+  /* Cards */
+  .stat-card { background: var(--card); border: 1px solid var(--border2); border-radius: 12px; padding: 20px 24px; }
+  .stat-icon { font-size: 22px; margin-bottom: 6px; }
+  .stat-val { font-family: var(--font-display); font-size: 28px; font-weight: 700; color: #f0f9ff; }
+  .stat-label { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .stat-sub { font-size: 10px; color: var(--dim); margin-top: 2px; }
+
+  .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px 24px; margin-bottom: 20px; }
+  .chart-title { font-family: var(--font-display); font-size: 15px; font-weight: 600; color: var(--accent2); margin-bottom: 4px; }
+  .chart-sub { font-size: 11px; color: var(--dim); margin-bottom: 16px; }
+  .chart-wrap { position: relative; }
+
+  /* Badges */
+  .badge-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+
+  /* Insight cards */
+  .insight-card { background: #0f1e35; border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .insight-icon { font-size: 18px; margin-bottom: 6px; }
+  .insight-title { font-family: var(--font-display); font-size: 13px; font-weight: 600; color: var(--accent3); margin-bottom: 6px; }
+  .insight-body { font-size: 11px; color: var(--dim); line-height: 1.6; }
+
+  /* Station rows */
+  .station-row { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 8px; transition: background 0.15s; }
+  .station-row:hover { background: #1e293b66; }
+  .station-rank { color: var(--faint); font-weight: 600; font-size: 12px; width: 20px; }
+  .station-badge { border-radius: 6px; padding: 2px 8px; font-size: 12px; font-weight: 600; width: 60px; text-align: center; border: 1px solid; }
+  .station-bar-wrap { flex: 1; height: 6px; background: var(--card); border-radius: 3px; overflow: hidden; }
+  .station-bar { height: 100%; border-radius: 3px; transition: width 0.4s; }
+  .station-aqi { font-weight: 700; font-size: 14px; width: 44px; text-align: right; }
+  .station-days { color: var(--faint); font-size: 10px; width: 54px; text-align: right; }
+
+  /* Pollutant reference */
+  .poll-ref { display: flex; align-items: center; background: #0f1e35; border-radius: 8px; padding: 8px 12px; gap: 10px; font-size: 11px; margin-bottom: 6px; }
+
+  /* Station toggle */
+  .toggle-group { display: flex; gap: 10px; margin-bottom: 20px; }
+  .toggle-btn { background: none; border: 1px solid var(--border2); cursor: pointer; padding: 7px 16px; border-radius: 6px; font-family: var(--font-mono); font-size: 12px; color: var(--muted); transition: all 0.18s; }
+  .toggle-btn.worst.active { background: #7f1d1d44; border-color: #7f1d1d; color: #fca5a5; }
+  .toggle-btn.best.active { background: #14532d44; border-color: #14532d; color: #86efac; }
+
+  /* Seasonal note */
+  .note { font-size: 11px; color: var(--dim); margin-top: 10px; }
+
+  /* Region cards */
+  .region-card { background: #0f1e35; border-radius: 10px; padding: 12px 14px; }
+  .region-name { font-weight: 600; font-size: 12px; margin-bottom: 4px; }
+  .region-aqi { font-family: var(--font-display); font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+  .region-note { font-size: 11px; color: var(--dim); line-height: 1.6; }
+
+  /* Pollutant detail cards */
+  .poll-detail { background: #0f1e35; border-radius: 10px; padding: 14px; border-left: 3px solid; }
+  .poll-detail-title { font-weight: 600; font-size: 12px; margin-bottom: 6px; }
+  .poll-detail-body { font-size: 11px; color: var(--dim); line-height: 1.6; }
+
+  /* Tooltip */
+  .ct { background: #1e293b !important; border: 1px solid var(--border2) !important; border-radius: 8px !important; color: var(--text) !important; font-family: var(--font-mono) !important; font-size: 12px !important; padding: 8px 12px !important; }
+
+  @media (max-width: 900px) {
+    .grid-4, .grid-2, .grid-2b, .grid-3, .grid-4r { grid-template-columns: 1fr; }
+    .header { flex-direction: column; gap: 12px; align-items: flex-start; }
+    .tabs { flex-wrap: wrap; }
+    .main { padding: 20px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="logo">🌫 AirSense Analytics
+      <span>India Air Quality Dataset · 110 Stations · 2015–2020</span>
+    </div>
+  </div>
+  <div class="tabs" id="tabs">
+    <button class="tab active" onclick="switchTab('overview')">Overview</button>
+    <button class="tab" onclick="switchTab('trend')">Trend</button>
+    <button class="tab" onclick="switchTab('pollutants')">Pollutants</button>
+    <button class="tab" onclick="switchTab('stations')">Stations</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- OVERVIEW -->
+  <div id="panel-overview" class="panel active">
+    <div class="grid-4">
+      <div class="stat-card"><div class="stat-icon">📊</div><div class="stat-val">99,634</div><div class="stat-label">Total Readings</div><div class="stat-sub">daily station records</div></div>
+      <div class="stat-card"><div class="stat-icon">📍</div><div class="stat-val">110</div><div class="stat-label">Monitoring Stations</div><div class="stat-sub">across India</div></div>
+      <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-val">44%</div><div class="stat-label">Good / Satisfactory</div><div class="stat-sub">of all readings</div></div>
+      <div class="stat-card"><div class="stat-icon">⚠️</div><div class="stat-val">28%</div><div class="stat-label">Poor / Severe</div><div class="stat-sub">of all readings</div></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="chart-card">
+        <div class="chart-title">AQI Category Distribution</div>
+        <div class="chart-sub">Total station-days per AQI bucket</div>
+        <div class="chart-wrap"><canvas id="chartAqiDist" height="220"></canvas></div>
+        <div class="badge-row" id="aqiBadges"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Dominant Pollutant Share</div>
+        <div class="chart-sub">Which pollutant drove AQI each day</div>
+        <div class="chart-wrap"><canvas id="chartDominant" height="200"></canvas></div>
+        <div id="domLegend" style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;margin-top:8px;"></div>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title">🔍 Key Patterns Found</div>
+      <div style="margin-bottom:14px;font-size:11px;color:var(--dim);">Auto-detected from 99,634 records across 110 stations</div>
+      <div class="grid-3">
+        <div class="insight-card"><div class="insight-icon">📅</div><div class="insight-title">Strong Seasonality</div><div class="insight-body">AQI spikes every Oct–Feb (winter) and drops to lowest in Jul–Sep (monsoon). This pattern repeats consistently across all years.</div></div>
+        <div class="insight-card"><div class="insight-icon">💨</div><div class="insight-title">PM2.5 Dominates</div><div class="insight-body">PM2.5 is the #1 driver in 40% of readings, followed by PM10 (35%). Together they account for 75% of all dominant pollutant days.</div></div>
+        <div class="insight-card"><div class="insight-icon">🗺️</div><div class="insight-title">North vs South Divide</div><div class="insight-body">Delhi (DL*) stations average AQI ~240+ (Poor), while southern Kerala (KL*) and Karnataka (KA*) average AQI ~50–65 (Good).</div></div>
+        <div class="insight-card"><div class="insight-icon">📉</div><div class="insight-title">COVID Lockdown Signal</div><div class="insight-body">April 2020 shows a sharp AQI drop to 80.7 — the lowest April on record — reflecting the COVID-19 lockdown's effect on emissions.</div></div>
+        <div class="insight-card"><div class="insight-icon">📈</div><div class="insight-title">Worsening 2018–2019</div><div class="insight-body">Winter peaks worsened from 2017 through 2019, with Dec 2018 hitting a dataset high of 271 avg AQI before improving in 2020.</div></div>
+        <div class="insight-card"><div class="insight-icon">🚗</div><div class="insight-title">CO as a Hidden Driver</div><div class="insight-body">CO is the dominant pollutant in 15,813 readings (~16%), signaling vehicular and industrial combustion as a major pollution source.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TREND -->
+  <div id="panel-trend" class="panel">
+    <div class="chart-card">
+      <div class="chart-title">Monthly Avg AQI — All Stations (2015–2020)</div>
+      <div class="chart-sub">Computed AQI averaged across all active stations each month. Reference lines mark AQI thresholds.</div>
+      <div class="chart-wrap"><canvas id="chartTrend" height="280"></canvas></div>
+    </div>
+    <div class="grid-2b">
+      <div class="chart-card" style="margin-bottom:0">
+        <div class="chart-title">📅 Seasonal Pattern (avg by month-of-year)</div>
+        <div class="chart-sub">Averaged across all years to reveal recurring cycles</div>
+        <div class="chart-wrap"><canvas id="chartSeasonal" height="200"></canvas></div>
+        <div class="note">🌧 Monsoon (Jun–Sep) consistently cleanest · ❄️ Winter (Nov–Jan) consistently worst</div>
+      </div>
+      <div class="chart-card" style="margin-bottom:0">
+        <div class="chart-title">📆 Annual Average AQI</div>
+        <div class="chart-sub">Year-over-year comparison</div>
+        <div class="chart-wrap"><canvas id="chartYearly" height="200"></canvas></div>
+        <div class="note">2020 drops significantly due to COVID lockdowns in Mar–Jun</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- POLLUTANTS -->
+  <div id="panel-pollutants" class="panel">
+    <div class="grid-2">
+      <div class="chart-card">
+        <div class="chart-title">Average Concentration by Pollutant</div>
+        <div class="chart-sub">Dataset-wide mean values across all stations and dates</div>
+        <div class="chart-wrap"><canvas id="chartPollAvg" height="300"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Pollutant Safety Reference</div>
+        <div class="chart-sub">vs. India NAAQS 24hr safe limits</div>
+        <div id="pollRefList"></div>
+        <div style="font-size:10px;color:var(--faint);margin-top:10px;">Safe limits per India NAAQS standards</div>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Why PM2.5, PM10 & CO Matter Most</div>
+      <div style="height:14px;"></div>
+      <div class="grid-3">
+        <div class="poll-detail" style="border-color:#f97316"><div class="poll-detail-title" style="color:#f97316">PM2.5 — Critical</div><div class="poll-detail-body">Particles &lt;2.5µm penetrate deep into lungs and bloodstream. Dataset avg of 80.3 µg/m³ is 34% above India's 24hr safe limit. PM2.5 is the dominant pollutant in 40% of all station-days.</div></div>
+        <div class="poll-detail" style="border-color:#eab308"><div class="poll-detail-title" style="color:#eab308">PM10 — High</div><div class="poll-detail-body">Coarse particles from dust, construction, and road traffic. At 158 µg/m³ avg, this is 58% above the safe limit of 100 µg/m³ — pointing to significant dust and construction activity.</div></div>
+        <div class="poll-detail" style="border-color:#94a3b8"><div class="poll-detail-title" style="color:#94a3b8">CO — Underrated</div><div class="poll-detail-body">Carbon monoxide is dominant in 15,813 days (16% of readings). CO's dominance indicates heavy vehicular and biomass burning activity, especially in urban and peri-urban stations.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATIONS -->
+  <div id="panel-stations" class="panel">
+    <div class="toggle-group">
+      <button id="btnWorst" class="toggle-btn worst active" onclick="switchStations('worst')">🔴 Most Polluted</button>
+      <button id="btnBest" class="toggle-btn best" onclick="switchStations('best')">🟢 Cleanest Stations</button>
+    </div>
+    <div class="grid-2b" style="margin-bottom:0">
+      <div class="chart-card" style="margin-bottom:0">
+        <div class="chart-title" id="stationListTitle">🔴 Top 8 Most Polluted Stations</div>
+        <div style="height:14px;"></div>
+        <div id="stationList"></div>
+      </div>
+      <div class="chart-card" style="margin-bottom:0">
+        <div class="chart-title" id="stationChartTitle">Most Polluted — Avg AQI</div>
+        <div style="height:14px;"></div>
+        <div class="chart-wrap"><canvas id="chartStations" height="260"></canvas></div>
+      </div>
+    </div>
+    <div class="chart-card" style="margin-top:20px">
+      <div class="chart-title">🗺️ Regional Insight</div>
+      <div style="height:10px;"></div>
+      <div class="grid-4r">
+        <div class="region-card" style="border-top:3px solid #ef4444"><div class="region-name" style="color:#ef4444">Delhi (DL*)</div><div class="region-aqi" style="color:#ef4444">AQI ~240</div><div class="region-note">Most polluted region. 20+ stations all in 'Poor'. Dense traffic + industry + dust year-round.</div></div>
+        <div class="region-card" style="border-top:3px solid #f97316"><div class="region-name" style="color:#f97316">Uttar Pradesh (UP*)</div><div class="region-aqi" style="color:#f97316">AQI ~200</div><div class="region-note">2nd worst. Industrial cities like Kanpur, Lucknow. High PM2.5 from factories and vehicles.</div></div>
+        <div class="region-card" style="border-top:3px solid #22c55e"><div class="region-name" style="color:#22c55e">Kerala (KL*)</div><div class="region-aqi" style="color:#22c55e">AQI ~55–60</div><div class="region-note">Cleanest region. Coastal climate and high greenery reduce pollutant accumulation significantly.</div></div>
+        <div class="region-card" style="border-top:3px solid #84cc16"><div class="region-name" style="color:#84cc16">South India (TN/KA*)</div><div class="region-aqi" style="color:#84cc16">AQI ~65–85</div><div class="region-note">Generally clean. Monsoon rains, coastal breeze, and lower industrial density contribute.</div></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─── DATA ───────────────────────────────────────────────────────────────────
+const AQI_DIST = [
+  { name: "Good", value: 17475, color: "#22c55e" },
+  { name: "Satisfactory", value: 26557, color: "#84cc16" },
+  { name: "Moderately\npolluted", value: 27577, color: "#eab308" },
+  { name: "Poor", value: 9463, color: "#f97316" },
+  { name: "Very poor", value: 13414, color: "#ef4444" },
+  { name: "Severe", value: 5103, color: "#7f1d1d" },
+];
+
+const DOMINANT = [
+  { name: "PM2.5", value: 40341, color: "#f97316" },
+  { name: "PM10", value: 34696, color: "#eab308" },
+  { name: "CO", value: 15813, color: "#94a3b8" },
+  { name: "O₃", value: 4708, color: "#22d3ee" },
+  { name: "NO₂", value: 3493, color: "#a78bfa" },
+  { name: "SO₂", value: 312, color: "#fb7185" },
+  { name: "NH₃", value: 226, color: "#86efac" },
+];
+
+const MONTHLY = [
+  {m:"Jan 15",v:170.3},{m:"Feb 15",v:163.3},{m:"Mar 15",v:153.9},{m:"Apr 15",v:172.5},{m:"May 15",v:187.7},{m:"Jun 15",v:142.4},{m:"Jul 15",v:124.6},{m:"Aug 15",v:123.8},{m:"Sep 15",v:138.1},{m:"Oct 15",v:180.3},{m:"Nov 15",v:222.9},{m:"Dec 15",v:204.2},
+  {m:"Jan 16",v:222.6},{m:"Feb 16",v:197.9},{m:"Mar 16",v:160.4},{m:"Apr 16",v:165.7},{m:"May 16",v:147.9},{m:"Jun 16",v:153.2},{m:"Jul 16",v:105.2},{m:"Aug 16",v:94.6},{m:"Sep 16",v:97.0},{m:"Oct 16",v:133.7},{m:"Nov 16",v:160.8},{m:"Dec 16",v:160.6},
+  {m:"Jan 17",v:140.6},{m:"Feb 17",v:125.7},{m:"Mar 17",v:95.1},{m:"Apr 17",v:98.6},{m:"May 17",v:96.3},{m:"Jun 17",v:60.5},{m:"Jul 17",v:47.4},{m:"Aug 17",v:44.2},{m:"Sep 17",v:51.6},{m:"Oct 17",v:132.8},{m:"Nov 17",v:239.9},{m:"Dec 17",v:232.0},
+  {m:"Jan 18",v:242.0},{m:"Feb 18",v:215.1},{m:"Mar 18",v:172.8},{m:"Apr 18",v:164.1},{m:"May 18",v:163.1},{m:"Jun 18",v:151.3},{m:"Jul 18",v:89.4},{m:"Aug 18",v:96.0},{m:"Sep 18",v:99.9},{m:"Oct 18",v:210.2},{m:"Nov 18",v:259.5},{m:"Dec 18",v:271.3},
+  {m:"Jan 19",v:254.9},{m:"Feb 19",v:196.6},{m:"Mar 19",v:158.8},{m:"Apr 19",v:165.3},{m:"May 19",v:167.7},{m:"Jun 19",v:127.5},{m:"Jul 19",v:95.0},{m:"Aug 19",v:73.7},{m:"Sep 19",v:74.2},{m:"Oct 19",v:158.8},{m:"Nov 19",v:216.3},{m:"Dec 19",v:223.6},
+  {m:"Jan 20",v:202.3},{m:"Feb 20",v:178.4},{m:"Mar 20",v:106.6},{m:"Apr 20",v:80.7},{m:"May 20",v:93.2},{m:"Jun 20",v:79.3}
+];
+
+const SEASONAL_RAW = [
+  [170.3,222.6,140.6,242.0,254.9,202.3], // Jan
+  [163.3,197.9,125.7,215.1,196.6,178.4], // Feb
+  [153.9,160.4,95.1,172.8,158.8,106.6],  // Mar
+  [172.5,165.7,98.6,164.1,165.3,80.7],   // Apr
+  [187.7,147.9,96.3,163.1,167.7,93.2],   // May
+  [142.4,153.2,60.5,151.3,127.5,79.3],   // Jun
+  [124.6,105.2,47.4,89.4,95.0],          // Jul
+  [123.8,94.6,44.2,96.0,73.7],           // Aug
+  [138.1,97.0,51.6,99.9,74.2],           // Sep
+  [180.3,133.7,132.8,210.2,158.8],       // Oct
+  [222.9,160.8,239.9,259.5,216.3],       // Nov
+  [204.2,160.6,232.0,271.3,223.6],       // Dec
+];
+const MONTHS_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const SEASONAL = MONTHS_SHORT.map((name,i) => {
+  const arr = SEASONAL_RAW[i];
+  return { name, avg: Math.round(arr.reduce((a,b)=>a+b,0)/arr.length) };
+});
+
+const YEARLY = [
+  { year:"2015", avg: Math.round([170.3,163.3,153.9,172.5,187.7,142.4,124.6,123.8,138.1,180.3,222.9,204.2].reduce((a,b)=>a+b)/12) },
+  { year:"2016", avg: Math.round([222.6,197.9,160.4,165.7,147.9,153.2,105.2,94.6,97.0,133.7,160.8,160.6].reduce((a,b)=>a+b)/12) },
+  { year:"2017", avg: Math.round([140.6,125.7,95.1,98.6,96.3,60.5,47.4,44.2,51.6,132.8,239.9,232.0].reduce((a,b)=>a+b)/12) },
+  { year:"2018", avg: Math.round([242.0,215.1,172.8,164.1,163.1,151.3,89.4,96.0,99.9,210.2,259.5,271.3].reduce((a,b)=>a+b)/12) },
+  { year:"2019", avg: Math.round([254.9,196.6,158.8,165.3,167.7,127.5,95.0,73.7,74.2,158.8,216.3,223.6].reduce((a,b)=>a+b)/12) },
+  { year:"2020", avg: Math.round([202.3,178.4,106.6,80.7,93.2,79.3].reduce((a,b)=>a+b)/6) },
+];
+
+const POLL_AVGS = [
+  { name: "PM10",    value: 158.0, unit: "µg/m³", color: "#eab308", safe: 100, exceed: true },
+  { name: "PM2.5",   value: 80.3,  unit: "µg/m³", color: "#f97316", safe: 60,  exceed: true },
+  { name: "NOx",     value: 41.4,  unit: "µg/m³", color: "#a78bfa", safe: null },
+  { name: "O₃",      value: 38.1,  unit: "µg/m³", color: "#22d3ee", safe: 100, exceed: false },
+  { name: "NO₂",     value: 35.2,  unit: "µg/m³", color: "#818cf8", safe: 80,  exceed: false },
+  { name: "NH₃",     value: 28.7,  unit: "µg/m³", color: "#86efac", safe: 400, exceed: false },
+  { name: "NO",      value: 23.1,  unit: "µg/m³", color: "#c084fc", safe: null },
+  { name: "Toluene", value: 15.5,  unit: "µg/m³", color: "#fb923c", safe: null },
+  { name: "SO₂",     value: 12.3,  unit: "µg/m³", color: "#fb7185", safe: 80,  exceed: false },
+  { name: "CO",      value: 1.6,   unit: "mg/m³", color: "#94a3b8", safe: 4,   exceed: false },
+];
+
+const TOP_STATIONS = [
+  { station:"DL002", avg_aqi:291.8, days:1643 },
+  { station:"GJ001", avg_aqi:274.4, days:1410 },
+  { station:"DL038", avg_aqi:248.5, days:879  },
+  { station:"UP016", avg_aqi:245.5, days:1010 },
+  { station:"DL020", avg_aqi:243.6, days:728  },
+  { station:"DL010", avg_aqi:241.7, days:881  },
+  { station:"DL015", avg_aqi:241.3, days:881  },
+  { station:"DL032", avg_aqi:236.6, days:874  },
+];
+const BOTTOM_STATIONS = [
+  { station:"KA010", avg_aqi:44.7,  days:1603 },
+  { station:"ML001", avg_aqi:43.9,  days:277  },
+  { station:"MH005", avg_aqi:43.3,  days:1971 },
+  { station:"MZ001", avg_aqi:31.0,  days:113  },
+  { station:"KL007", avg_aqi:53.7,  days:131  },
+  { station:"KL008", avg_aqi:61.0,  days:1096 },
+  { station:"TN004", avg_aqi:66.2,  days:1938 },
+  { station:"KA006", avg_aqi:66.2,  days:685  },
+];
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function aqiColor(v) {
+  if (v < 50)  return "#22c55e";
+  if (v < 100) return "#84cc16";
+  if (v < 200) return "#eab308";
+  if (v < 300) return "#f97316";
+  if (v < 400) return "#ef4444";
+  return "#7f1d1d";
+}
+const CHART_DEFAULTS = {
+  plugins: { legend: { display: false }, tooltip: {
+    backgroundColor: "#1e293b", borderColor: "#334155", borderWidth: 1,
+    titleColor: "#94a3b8", bodyColor: "#e2e8f0",
+    titleFont: { family: "'IBM Plex Mono'" }, bodyFont: { family: "'IBM Plex Mono'" },
+    padding: 10, cornerRadius: 8
+  }},
+  scales: {
+    x: { grid: { color: "#1e3a5f" }, ticks: { color: "#64748b", font: { family: "'IBM Plex Mono'", size: 10 } } },
+    y: { grid: { color: "#1e3a5f" }, ticks: { color: "#64748b", font: { family: "'IBM Plex Mono'", size: 10 } } }
+  }
+};
+
+// ─── OVERVIEW CHARTS ─────────────────────────────────────────────────────────
+// AQI badges
+const badgeRow = document.getElementById("aqiBadges");
+AQI_DIST.forEach(b => {
+  const s = document.createElement("span");
+  s.className = "badge";
+  s.textContent = b.name.replace("\n"," ");
+  s.style.background = b.color + "22"; s.style.color = b.color; s.style.border = `1px solid ${b.color}44`;
+  badgeRow.appendChild(s);
+});
+
+new Chart(document.getElementById("chartAqiDist"), {
+  type: "bar",
+  data: {
+    labels: AQI_DIST.map(d => d.name.replace("\n"," ")),
+    datasets: [{ data: AQI_DIST.map(d => d.value), backgroundColor: AQI_DIST.map(d => d.color), borderRadius: 4 }]
+  },
+  options: { ...CHART_DEFAULTS, plugins: { ...CHART_DEFAULTS.plugins, tooltip: { ...CHART_DEFAULTS.plugins.tooltip,
+    callbacks: { label: ctx => ` ${ctx.parsed.y.toLocaleString()} days` }
+  }}}
+});
+
+// Dominant pie
+const domLegend = document.getElementById("domLegend");
+DOMINANT.forEach(d => {
+  const row = document.createElement("div");
+  row.style.cssText = "display:flex;align-items:center;gap:6px;font-size:11px;";
+  row.innerHTML = `<div style="width:8px;height:8px;border-radius:2px;background:${d.color};flex-shrink:0"></div><span style="color:var(--muted)">${d.name}</span><span style="color:#cbd5e1;margin-left:auto">${(d.value/1000).toFixed(0)}k</span>`;
+  domLegend.appendChild(row);
+});
+new Chart(document.getElementById("chartDominant"), {
+  type: "doughnut",
+  data: {
+    labels: DOMINANT.map(d => d.name),
+    datasets: [{ data: DOMINANT.map(d => d.value), backgroundColor: DOMINANT.map(d => d.color), borderWidth: 1, borderColor: "#131f35" }]
+  },
+  options: {
+    ...CHART_DEFAULTS,
+    plugins: { ...CHART_DEFAULTS.plugins, tooltip: { ...CHART_DEFAULTS.plugins.tooltip,
+      callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed.toLocaleString()} days` }
+    }}
+  }
+});
+
+// ─── TREND CHARTS ────────────────────────────────────────────────────────────
+new Chart(document.getElementById("chartTrend"), {
+  type: "line",
+  data: {
+    labels: MONTHLY.map(d => d.m),
+    datasets: [{
+      data: MONTHLY.map(d => d.v), borderColor: "#38bdf8", borderWidth: 2,
+      pointRadius: 0, pointHoverRadius: 5, pointHoverBackgroundColor: "#38bdf8",
+      fill: true, backgroundColor: "rgba(56,189,248,0.06)", tension: 0.3
+    }]
+  },
+  options: {
+    ...CHART_DEFAULTS,
+    plugins: {
+      ...CHART_DEFAULTS.plugins,
+      tooltip: { ...CHART_DEFAULTS.plugins.tooltip,
+        callbacks: { title: ctx => ctx[0].label, label: ctx => ` Avg AQI: ${ctx.parsed.y}` }
+      },
+      annotation: {}
+    },
+    scales: {
+      ...CHART_DEFAULTS.scales,
+      x: { ...CHART_DEFAULTS.scales.x, ticks: { ...CHART_DEFAULTS.scales.x.ticks, maxTicksLimit: 18 } },
+      y: { ...CHART_DEFAULTS.scales.y, min: 0, max: 320 }
+    }
+  }
+});
+
+new Chart(document.getElementById("chartSeasonal"), {
+  type: "bar",
+  data: {
+    labels: SEASONAL.map(d => d.name),
+    datasets: [{ data: SEASONAL.map(d => d.avg), backgroundColor: SEASONAL.map(d => aqiColor(d.avg)), borderRadius: 3 }]
+  },
+  options: { ...CHART_DEFAULTS, plugins: { ...CHART_DEFAULTS.plugins, tooltip: { ...CHART_DEFAULTS.plugins.tooltip,
+    callbacks: { label: ctx => ` Avg AQI: ${ctx.parsed.y}` }
+  }}}
+});
+
+new Chart(document.getElementById("chartYearly"), {
+  type: "bar",
+  data: {
+    labels: YEARLY.map(d => d.year),
+    datasets: [{ data: YEARLY.map(d => d.avg), backgroundColor: YEARLY.map(d => aqiColor(d.avg)), borderRadius: 4 }]
+  },
+  options: { ...CHART_DEFAULTS, plugins: { ...CHART_DEFAULTS.plugins, tooltip: { ...CHART_DEFAULTS.plugins.tooltip,
+    callbacks: { label: ctx => ` Avg AQI: ${ctx.parsed.y}` }
+  }}}
+});
+
+// ─── POLLUTANT CHARTS ────────────────────────────────────────────────────────
+new Chart(document.getElementById("chartPollAvg"), {
+  type: "bar",
+  data: {
+    labels: POLL_AVGS.map(d => d.name),
+    datasets: [{ data: POLL_AVGS.map(d => d.value), backgroundColor: POLL_AVGS.map(d => d.color), borderRadius: [0,4,4,0] }]
+  },
+  options: {
+    indexAxis: "y",
+    ...CHART_DEFAULTS,
+    plugins: { ...CHART_DEFAULTS.plugins, tooltip: { ...CHART_DEFAULTS.plugins.tooltip,
+      callbacks: { label: ctx => ` ${ctx.parsed.x} ${POLL_AVGS[ctx.dataIndex].unit}` }
+    }}
+  }
+});
+
+const pollRef = document.getElementById("pollRefList");
+[
+  { name:"PM2.5", safe:"60 µg/m³", avg:"80.3 µg/m³", ok:false },
+  { name:"PM10",  safe:"100 µg/m³", avg:"158 µg/m³", ok:false },
+  { name:"NO₂",   safe:"80 µg/m³", avg:"35.2 µg/m³", ok:true },
+  { name:"SO₂",   safe:"80 µg/m³", avg:"12.3 µg/m³", ok:true },
+  { name:"O₃",    safe:"100 µg/m³", avg:"38.1 µg/m³", ok:true },
+  { name:"CO",    safe:"4 mg/m³",   avg:"1.6 mg/m³",  ok:true },
+  { name:"NH₃",   safe:"400 µg/m³", avg:"28.7 µg/m³", ok:true },
+].forEach(p => {
+  const el = document.createElement("div");
+  el.className = "poll-ref";
+  el.innerHTML = `
+    <div style="color:var(--accent3);font-weight:600;width:52px">${p.name}</div>
+    <div style="color:var(--dim);flex:1">Safe: ${p.safe}</div>
+    <div style="color:var(--text)">Avg: ${p.avg}</div>
+    <div style="width:80px;text-align:right">${p.ok ? "✅ OK" : "⚠️ Exceeds"}</div>
+  `;
+  pollRef.appendChild(el);
+});
+
+// ─── STATIONS ────────────────────────────────────────────────────────────────
+let stationChart = null;
+let currentStationView = "worst";
+
+function renderStationList(data) {
+  const list = document.getElementById("stationList");
+  list.innerHTML = "";
+  data.forEach((s, i) => {
+    const c = aqiColor(s.avg_aqi);
+    const pct = Math.min(100, (s.avg_aqi / 300) * 100);
+    list.innerHTML += `
+      <div class="station-row">
+        <div class="station-rank">${i+1}</div>
+        <div class="station-badge" style="color:${c};background:${c}22;border-color:${c}44">${s.station}</div>
+        <div class="station-bar-wrap"><div class="station-bar" style="width:${pct}%;background:${c}"></div></div>
+        <div class="station-aqi" style="color:${c}">${s.avg_aqi}</div>
+        <div class="station-days">${s.days}d</div>
+      </div>`;
+  });
+}
+
+function renderStationChart(data) {
+  if (stationChart) stationChart.destroy();
+  stationChart = new Chart(document.getElementById("chartStations"), {
+    type: "bar",
+    data: {
+      labels: data.map(d => d.station),
+      datasets: [{ data: data.map(d => d.avg_aqi), backgroundColor: data.map(d => aqiColor(d.avg_aqi)), borderRadius: [0,4,4,0] }]
+    },
+    options: {
+      indexAxis: "y",
+      ...CHART_DEFAULTS,
+      plugins: { ...CHART_DEFAULTS.plugins, tooltip: { ...CHART_DEFAULTS.plugins.tooltip,
+        callbacks: { label: ctx => ` Avg AQI: ${ctx.parsed.x}` }
+      }},
+      scales: { ...CHART_DEFAULTS.scales, x: { ...CHART_DEFAULTS.scales.x, max: 320 } }
+    }
+  });
+}
+
+function switchStations(view) {
+  currentStationView = view;
+  const data = view === "worst" ? TOP_STATIONS : BOTTOM_STATIONS;
+  document.getElementById("btnWorst").classList.toggle("active", view === "worst");
+  document.getElementById("btnBest").classList.toggle("active", view === "best");
+  document.getElementById("stationListTitle").textContent = view === "worst" ? "🔴 Top 8 Most Polluted Stations" : "🟢 8 Cleanest Stations";
+  document.getElementById("stationChartTitle").textContent = view === "worst" ? "Most Polluted — Avg AQI" : "Cleanest — Avg AQI";
+  renderStationList(data);
+  renderStationChart(data);
+}
+renderStationList(TOP_STATIONS);
+renderStationChart(TOP_STATIONS);
+
+// ─── TAB SWITCHING ────────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.getElementById("panel-" + name).classList.add("active");
+  event.target.classList.add("active");
+}
+</script>
+</body>
+</html>
