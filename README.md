@@ -43,7 +43,7 @@ AQI-Project/
 1. preprocess.py
 
 Responsible for:
-- Normalizing column names (pm25, pm10 formatting fixes)
+- Normalizing column names
 - Converting pollutant values to numeric
 - Dropping rows with all pollutants missing
 - Saving cleaned dataset
@@ -71,9 +71,9 @@ pip install -r requirements.txt
 
 ## HOW TO RUN THE PROJECT: 
 
-step_1: clone repository 
-step_2: install requirements (python3, pandas, numpy)
-step_3: run pipeline [python run_pipeline.py]
+1. clone repository
+2. install requirements (python3, pandas, numpy)
+3. run pipeline [python run_pipeline.py]
 
 
 ## TECHNOLOGIES
