@@ -12,19 +12,18 @@ We implemented the official CPCB AQI breakpoint interpolation formula.
 
 For each pollutant:  
 
-AQI = ((I_high - I_low)*(C - C_low))/((C_high - C_low)) + I_low   (sub_index calculation)
+<img width="609" height="121" alt="image" src="https://github.com/user-attachments/assets/a2d95579-3de9-4137-9b1c-4efcab82d147" />
 
-C = pollutant concentration
+C = pollutant concentration;  
+(C_low, C_high) = breakpoint concentration range;  
+(I_low, I_high) = AQI index range;  
 
-(C_low, C_high) = breakpoint concentration range
-
-(I_low, I_high) = AQI index range
-
-AQI = max(sub_indices)
+<img width="308" height="67" alt="image" src="https://github.com/user-attachments/assets/2f75ccfa-6482-44d5-9e63-a10dc00e12fe" />
 
 ## PROJECT STRUCTURE
 
-'''AQI-Project/
+```
+AQI-Project/
 │
 ├── data/
 │   ├── raw/                # Input dataset(s)
@@ -39,7 +38,8 @@ AQI = max(sub_indices)
 │   └── cpcb_aqi.py         # AQI calculation logic
 │
 ├── run_pipeline.py         # Main pipeline runner
-└── README.md'''
+└── README.md
+```
 
 ## MODULE BREAKDOWN
 
