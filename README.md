@@ -15,7 +15,9 @@ For each pollutant:
 AQI = ((I_high - I_low)*(C - C_low))/((C_high - C_low)) + I_low   (sub_index calculation)
 
 C = pollutant concentration
+
 (C_low, C_high) = breakpoint concentration range
+
 (I_low, I_high) = AQI index range
 
 AQI = max(sub_indices)
@@ -23,20 +25,35 @@ AQI = max(sub_indices)
 ## PROJECT STRUCTURE
 
 AQI-Project/
+
 │
+
 ├── data/
+
 │   ├── raw/                # Input dataset(s)
+
 │   └── processed/          # Cleaned dataset
+
 │
+
 ├── outputs/
+
 │   └── predictions.csv     # Final computed results
+
 |   └── AQI_analysis.html   # Analysis of results
+
 │
+
 ├── src/
+
 │   ├── preprocess.py       # Data cleaning & normalization
+
 │   └── cpcb_aqi.py         # AQI calculation logic
+
 │
+
 ├── run_pipeline.py         # Main pipeline runner
+
 └── README.md
 
 ## MODULE BREAKDOWN
