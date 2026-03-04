@@ -1,5 +1,11 @@
 # AQI Computation Pipeline (CPCB-Based)
 
+## GROUP MEMBERS
+VELAGAPUDI MOHANA - SE24UCSE101
+PUSHPASHREE RAMGOPAL - SE24UCSE048
+KARTHIK KASULA - SE24UCSE096
+VAISHNAVI VELAGAPUDI - SE24UCSE106
+
 ## OVERVIEW
 This project implements a data processing pipeline for Air Quality Index (AQI) analysis and prediction. It reads raw air quality data, performs preprocessing and cleaning, and generates structured outputs for downstream analysis or modeling.
 
