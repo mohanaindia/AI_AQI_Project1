@@ -24,37 +24,22 @@ AQI = max(sub_indices)
 
 ## PROJECT STRUCTURE
 
-### AQI-Project/
-
+'''AQI-Project/
 │
-
 ├── data/
-
 │   ├── raw/                # Input dataset(s)
-
 │   └── processed/          # Cleaned dataset
-
 │
-
 ├── outputs/
-
 │   └── predictions.csv     # Final computed results
-
 |   └── AQI_analysis.html   # Analysis of results
-
 │
-
 ├── src/
-
 │   ├── preprocess.py       # Data cleaning & normalization
-
 │   └── cpcb_aqi.py         # AQI calculation logic
-
 │
-
 ├── run_pipeline.py         # Main pipeline runner
-
-└── README.md
+└── README.md'''
 
 ## MODULE BREAKDOWN
 
