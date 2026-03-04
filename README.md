@@ -24,7 +24,7 @@ AQI = max(sub_indices)
 
 ## PROJECT STRUCTURE
 
-AQI-Project/
+### AQI-Project/
 
 │
 
